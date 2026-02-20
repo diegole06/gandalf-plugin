@@ -1,0 +1,24 @@
+{
+  "name": "gandalf",
+  "version": "1.0.0",
+  "description": "Gandalf — Deterministic adversarial investigation protocol for payment integration incidents",
+  "author": {
+    "name": "Diego Leon",
+    "email": "diego.leon@y.uno"
+  },
+  "license": "MIT",
+  "keywords": [
+    "investigation",
+    "incident",
+    "debugging",
+    "payments",
+    "tdd",
+    "testing",
+    "jira",
+    "datadog",
+    "3ds",
+    "provider-integration"
+  ],
+  "commands": "./commands/",
+  "skills": "./skills/"
+}
