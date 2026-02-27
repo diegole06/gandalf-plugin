@@ -6,7 +6,7 @@ description: |
   "deploy monitor", "como va el deploy", "monitorea {service}", "vigila {service}".
   Provides pre-deploy risk analysis (code diff), live post-deploy monitoring, and consolidated report.
   NATIVE: Auto-activates on deploy monitoring keywords.
-allowed-tools: Bash(curl:*), Bash(jq:*), Bash(git:*), Read, Grep, Glob, Task, WebFetch, mcp__plugin_yuno_datadog__get_logs, mcp__plugin_yuno_datadog__list_traces, mcp__plugin_yuno_datadog__query_metrics, mcp__plugin_yuno_datadog__get_monitors, mcp__plugin_yuno_datadog__list_hosts, mcp__plugin_yuno_datadog__get_active_hosts_count, mcp__plugin_yuno_github__list_commits, mcp__plugin_yuno_github__get_file_contents, mcp__plugin_yuno_github__get_pull_request_files, mcp__github__list_commits, mcp__github__get_file_contents, mcp__github__get_pull_request_files, mcp__jira__jira_create_issue, mcp__jira__jira_add_comment, mcp__jira__jira_search_issues
+allowed-tools: Bash(curl:*), Bash(jq:*), Bash(git:*), Read, Grep, Glob, Task, WebFetch, mcp__plugin_yuno_datadog__get_logs, mcp__plugin_yuno_datadog__list_traces, mcp__plugin_yuno_datadog__query_metrics, mcp__plugin_yuno_datadog__get_monitors, mcp__plugin_yuno_datadog__list_hosts, mcp__plugin_yuno_datadog__get_active_hosts_count, mcp__plugin_yuno_github__list_commits, mcp__plugin_yuno_github__get_file_contents, mcp__plugin_yuno_github__get_pull_request_files, mcp__github__list_commits, mcp__github__get_file_contents, mcp__github__get_pull_request_files, mcp__jira__jira_create_issue, mcp__jira__jira_add_comment, mcp__jira__jira_search_issues, mcp__plugin_yuno_context7__resolve-library-id, mcp__plugin_yuno_context7__query-docs
 ---
 
 # Gandalf Sentinel — Deploy Monitoring Protocol
@@ -65,6 +65,30 @@ Exceptions: technical identifiers (file paths, function names, service names, tr
 4. Validate service exists locally at `~/Documents/ms/{service-name}/`
 
 If service directory not found locally, proceed anyway using only remote data sources (Datadog, GitHub).
+
+## Phase 0: Load Yuno Knowledge Base Context
+
+Before starting the monitoring pipeline, load architectural context for the service from `yuno-payments/knowledge-base-lib`.
+
+**Triple-Source Strategy (try in order, use first available):**
+
+1. **Local KB** (`~/Documents/ms/knowledge-base-lib/`):
+   - Grep `architecture/SERVICE_CATALOG.md` for service name → get team, type, criticality tier
+   - Read `teams/{team}/repositories/{service-name}.md` for service documentation
+   - Read the matching payment flow from `architecture/flows/` based on service type
+   - Read `architecture/dependencies/service-dependency-overview.md` for upstream/downstream services
+
+2. **Context7 MCP** (if local not available):
+   - `mcp__plugin_yuno_context7__resolve-library-id` with `libraryName: "yuno-payments/knowledge-base-lib"`
+   - `mcp__plugin_yuno_context7__query-docs` with query: "{service-name} architecture dependencies payment flow"
+
+3. **GitHub MCP** (if both unavailable):
+   - `mcp__github__get_file_contents` from `yuno-payments/knowledge-base-lib` for service doc and relevant flow
+
+**KB context is used for:**
+- Phase 1: Enriching risk classification with business context (e.g., "this file handles 3DS challenge responses" vs just "ALTO risk")
+- Phase 2: Understanding expected behavior vs anomalous behavior
+- Phase 3: Correlating anomalies with the service's role in the payment chain
 
 ## Phase 1: PRE-DEPLOY — Risk Scan
 

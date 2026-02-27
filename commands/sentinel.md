@@ -1,7 +1,7 @@
 ---
 description: Monitor a deploy — pre-deploy risk scan, live monitoring, and consolidated health report
 argument-hint: <service-name> [environment] [--duration=N] [--baseline=Nm]
-allowed-tools: Bash(curl:*), Bash(jq:*), Bash(git:*), Read, Grep, Glob, Task, WebFetch, mcp__plugin_yuno_datadog__get_logs, mcp__plugin_yuno_datadog__list_traces, mcp__plugin_yuno_datadog__query_metrics, mcp__plugin_yuno_datadog__get_monitors, mcp__plugin_yuno_datadog__list_hosts, mcp__plugin_yuno_datadog__get_active_hosts_count, mcp__plugin_yuno_github__list_commits, mcp__plugin_yuno_github__get_file_contents, mcp__plugin_yuno_github__get_pull_request_files, mcp__github__list_commits, mcp__github__get_file_contents, mcp__github__get_pull_request_files, mcp__jira__jira_create_issue, mcp__jira__jira_add_comment, mcp__jira__jira_search_issues
+allowed-tools: Bash(curl:*), Bash(jq:*), Bash(git:*), Read, Grep, Glob, Task, WebFetch, mcp__plugin_yuno_datadog__get_logs, mcp__plugin_yuno_datadog__list_traces, mcp__plugin_yuno_datadog__query_metrics, mcp__plugin_yuno_datadog__get_monitors, mcp__plugin_yuno_datadog__list_hosts, mcp__plugin_yuno_datadog__get_active_hosts_count, mcp__plugin_yuno_github__list_commits, mcp__plugin_yuno_github__get_file_contents, mcp__plugin_yuno_github__get_pull_request_files, mcp__github__list_commits, mcp__github__get_file_contents, mcp__github__get_pull_request_files, mcp__jira__jira_create_issue, mcp__jira__jira_add_comment, mcp__jira__jira_search_issues, mcp__plugin_yuno_context7__resolve-library-id, mcp__plugin_yuno_context7__query-docs
 ---
 
 # Gandalf Sentinel — Deploy Monitoring
@@ -38,6 +38,25 @@ Exceptions: technical identifiers (file paths, function names, service names, tr
 | `environment` | NO | `staging` | Target: dev, staging, sandbox, production |
 | `--duration=N` | NO | `10` | Minutes of post-deploy monitoring |
 | `--baseline=Nm` | NO | `30m` | Pre-deploy baseline window for comparison |
+
+## Pre-Execution — Load Yuno Knowledge Base Context
+
+Before starting the 3-phase pipeline, load service context from `yuno-payments/knowledge-base-lib`:
+
+**Source 1 — Local KB** (if `~/Documents/ms/knowledge-base-lib/` exists):
+1. Grep `SERVICE_CATALOG.md` for the service name to identify team and type
+2. Read `teams/{team}/repositories/{service-name}.md` for service documentation
+3. Read the relevant payment flow from `architecture/flows/` based on the service type
+4. Read `architecture/dependencies/service-dependency-overview.md` for upstream/downstream context
+
+**Source 2 — Context7 MCP** (if local not available):
+1. `mcp__plugin_yuno_context7__resolve-library-id` with `libraryName: "yuno-payments/knowledge-base-lib"`
+2. `mcp__plugin_yuno_context7__query-docs` with query: "{service-name} architecture dependencies payment flow"
+
+**Source 3 — GitHub MCP** (if both unavailable):
+1. `mcp__github__get_file_contents` from `yuno-payments/knowledge-base-lib` for the service doc and flow
+
+This context is used in Phase 1 (risk classification of changed files with business context) and Phase 3 (anomaly correlation with architectural role).
 
 ## Execution
 

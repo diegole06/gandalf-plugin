@@ -18,7 +18,7 @@ If no report exists in context, tell the user to run `/gandalf:analyze` first.
 `$ARGUMENTS` — optional ticket ID to disambiguate if multiple investigations exist in context.
 If empty, use the most recent report in the conversation.
 
-## Step 1 — Extract Fix Plan from Report
+## Step 1 — Extract Fix Plan and Load KB Context
 
 From the report in the conversation context, extract:
 - **Archivos afectados** (from Metadata section)
@@ -32,6 +32,24 @@ Determine the working directory:
 - Check if current directory is the affected service repo
 - If not, check `~/Documents/ms/{service-name}/`
 - If the service repo is not found locally, tell the user and stop
+
+### Load Yuno Knowledge Base Context
+
+Before implementing, understand the service's role in the architecture:
+
+**Source 1 — Local KB** (if `~/Documents/ms/knowledge-base-lib/` exists):
+1. Read `~/Documents/ms/knowledge-base-lib/teams/{team}/repositories/{service-name}.md` for service documentation
+2. Read the relevant payment flow from `~/Documents/ms/knowledge-base-lib/architecture/flows/` matching the fix context
+3. Read `~/Documents/ms/knowledge-base-lib/architecture/dependencies/service-dependency-overview.md` if fix affects inter-service communication
+
+**Source 2 — Context7 MCP** (if local not available):
+1. `mcp__plugin_yuno_context7__resolve-library-id` with `libraryName: "yuno-payments/knowledge-base-lib"`
+2. `mcp__plugin_yuno_context7__query-docs` with query about the service and fix context
+
+**Source 3 — GitHub MCP** (if both unavailable):
+1. `mcp__github__get_file_contents` from `yuno-payments/knowledge-base-lib` for the service doc and relevant flow
+
+This context ensures the fix respects the service's position in the payment chain and doesn't break upstream/downstream contracts.
 
 ## Step 2 — Create Branch
 

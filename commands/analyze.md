@@ -1,7 +1,7 @@
 ---
 description: Start a Gandalf structured investigation — accepts Jira ticket IDs, Jira URLs, Slack links, or raw descriptions
 argument-hint: <jira-ticket | jira-url | slack-url | description> [--manual]
-allowed-tools: Bash(curl:*), Bash(jq:*), Read, Grep, Glob, Task, WebFetch, mcp__plugin_yuno_datadog__get_logs, mcp__plugin_yuno_datadog__list_traces, mcp__plugin_yuno_datadog__query_metrics, mcp__plugin_yuno_datadog__get_monitors, mcp__jira__jira_get_issue, mcp__jira__jira_search_issues, mcp__jira__jira_get_comments, mcp__jira__jira_get_attachments, mcp__github__get_file_contents, mcp__github__search_code, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__timeline
+allowed-tools: Bash(curl:*), Bash(jq:*), Read, Grep, Glob, Task, WebFetch, mcp__plugin_yuno_datadog__get_logs, mcp__plugin_yuno_datadog__list_traces, mcp__plugin_yuno_datadog__query_metrics, mcp__plugin_yuno_datadog__get_monitors, mcp__jira__jira_get_issue, mcp__jira__jira_search_issues, mcp__jira__jira_get_comments, mcp__jira__jira_get_attachments, mcp__github__get_file_contents, mcp__github__search_code, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_yuno_context7__resolve-library-id, mcp__plugin_yuno_context7__query-docs
 ---
 
 # Gandalf Analyze
@@ -150,6 +150,74 @@ Then WAIT for user to paste the message content before continuing.
 
 ### Type D: Raw Text
 If none of the above patterns match, use `$ARGUMENTS` as-is — it's a direct incident description.
+
+## Step 1.5 — Load Yuno Knowledge Base Context (S0.5:CONTEXT)
+
+After detecting the input and identifying the affected service, load architectural context from the Yuno Knowledge Base (`yuno-payments/knowledge-base-lib`).
+
+**Triple-Source Strategy (try in order, use first available):**
+
+### Source 1: Local Clone (fastest)
+Check `~/Documents/ms/knowledge-base-lib/` exists. If yes:
+
+1. **Identify service team and type:**
+```bash
+grep -i "{service-name}" ~/Documents/ms/knowledge-base-lib/architecture/SERVICE_CATALOG.md
+```
+
+2. **Load service documentation:**
+Read `~/Documents/ms/knowledge-base-lib/teams/{team}/repositories/{service-name}.md`
+
+3. **Load relevant payment flow** based on keywords in the ticket:
+
+| Keyword in ticket | Flow file |
+|-------------------|-----------|
+| payment, pago, authorize, capture | `architecture/flows/payment-flow-complete.md` |
+| refund, reembolso, reversal | `architecture/flows/refund-flow.md` |
+| 3ds, 3d secure, authentication | `architecture/flows/3ds-authentication-flow.md` |
+| webhook, notification, callback | `architecture/flows/webhook-flow.md` |
+| checkout, widget, sdk | `architecture/flows/checkout-flow.md` |
+| chargeback, contracargo, dispute | `architecture/flows/chargeback-flow.md` |
+| routing, enrutamiento, smart routing | `architecture/flows/routing-flow-complete.md` |
+| subscription, suscripcion, recurring | `architecture/flows/subscription-flow.md` |
+| payout, desembolso, disbursement | `architecture/flows/payout-flow.md` |
+
+4. **Resolve ambiguous terms** from the ticket using the glossary:
+```bash
+grep -i "{ambiguous_term}" ~/Documents/ms/knowledge-base-lib/GLOSSARY.md
+```
+
+5. **Load service dependencies** if the investigation hints at multi-service issues:
+Read `~/Documents/ms/knowledge-base-lib/architecture/dependencies/service-dependency-overview.md`
+
+### Source 2: Context7 MCP (semantic search fallback)
+If local clone is not available, use Context7:
+
+1. Resolve the library:
+`mcp__plugin_yuno_context7__resolve-library-id` with `libraryName: "yuno-payments/knowledge-base-lib"` and `query: "{service-name} {ticket context}"`
+
+2. Query documentation:
+`mcp__plugin_yuno_context7__query-docs` with the resolved library ID and a query describing what context is needed (e.g., "architecture flow for refund processing in {service-name}")
+
+### Source 3: GitHub MCP (remote fallback)
+If both local and Context7 are unavailable:
+
+1. `mcp__github__get_file_contents` from `yuno-payments/knowledge-base-lib`:
+   - `architecture/SERVICE_CATALOG.md` — to identify team/type
+   - `teams/{team}/repositories/{service-name}.md` — service documentation
+   - `architecture/flows/{relevant-flow}.md` — payment flow context
+
+2. `mcp__github__search_code` in `yuno-payments/knowledge-base-lib` for service-specific context
+
+### Context Output
+Store the gathered KB context for use in subsequent states:
+- **Team ownership**: which team owns the service
+- **Service type**: API, integration, orchestrator, webhook handler, etc.
+- **Position in flow**: where in the payment chain this service sits
+- **Dependencies**: upstream and downstream services
+- **Known patterns**: documented architecture patterns for this service type
+
+This context enriches S1:DECOMPOSE (service classification), S3:INVESTIGATE (targeted searches), S4:HYPOTHESIZE (architecture-aware hypotheses), and the final report (Solucion Tecnica references flow context).
 
 ## Step 2 — Execute Gandalf State Machine (INTERNAL in auto mode, INTERACTIVE in manual mode)
 

@@ -7,7 +7,7 @@ description: |
   "por que fallo", "investigate", "incident", "gandalf", "analyze incident", "debug payment".
   Accepts Jira tickets, Jira URLs, Slack links, or raw descriptions.
   NATIVE: Auto-activates on pattern match — user does NOT need to type /gandalf:analyze.
-allowed-tools: Bash(curl:*), Bash(jq:*), Read, Grep, Glob, Task, WebFetch, mcp__plugin_yuno_datadog__get_logs, mcp__plugin_yuno_datadog__list_traces, mcp__plugin_yuno_datadog__query_metrics, mcp__plugin_yuno_datadog__get_monitors, mcp__jira__jira_get_issue, mcp__jira__jira_search_issues, mcp__jira__jira_get_comments, mcp__jira__jira_get_attachments, mcp__github__get_file_contents, mcp__github__search_code, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__timeline
+allowed-tools: Bash(curl:*), Bash(jq:*), Read, Grep, Glob, Task, WebFetch, mcp__plugin_yuno_datadog__get_logs, mcp__plugin_yuno_datadog__list_traces, mcp__plugin_yuno_datadog__query_metrics, mcp__plugin_yuno_datadog__get_monitors, mcp__jira__jira_get_issue, mcp__jira__jira_search_issues, mcp__jira__jira_get_comments, mcp__jira__jira_get_attachments, mcp__github__get_file_contents, mcp__github__search_code, mcp__plugin_claude-mem_mcp-search__search, mcp__plugin_claude-mem_mcp-search__get_observations, mcp__plugin_claude-mem_mcp-search__timeline, mcp__plugin_yuno_context7__resolve-library-id, mcp__plugin_yuno_context7__query-docs
 ---
 
 # Gandalf Investigation Protocol
@@ -65,12 +65,13 @@ This allows the user to guide the investigation interactively.
 ## Internal Protocol (executed silently in auto, shown in manual)
 
 1. `[S0:AWAIT]` — Acknowledge input, classify source type
-2. `[S1:DECOMPOSE]` — Parse fetched data into atomic facts
-3. `[S2:PLAN]` — Generate 5-8 investigation steps
-4. `[S3:INVESTIGATE]` — Execute using Datadog, Jira, GitHub, codebase tools, memory
-5. `[S4:HYPOTHESIZE]` — Multi-agent adversarial (PaymentsDev/QA/Product/Security/TechLead)
-6. `[S5:DEBATE]` — Adversarial debate with confidence adjustments
-7. `[S6:CONVERGE]` — Select winner per dominance rules
+2. `[S0.5:CONTEXT]` — Load Yuno Knowledge Base context (service docs, flows, glossary, dependencies)
+3. `[S1:DECOMPOSE]` — Parse fetched data into atomic facts (enriched with KB context)
+4. `[S2:PLAN]` — Generate 5-8 investigation steps
+5. `[S3:INVESTIGATE]` — Execute using Datadog, Jira, GitHub, codebase tools, memory, KB
+6. `[S4:HYPOTHESIZE]` — Multi-agent adversarial (PaymentsDev/QA/Product/Security/TechLead)
+7. `[S5:DEBATE]` — Adversarial debate with confidence adjustments
+8. `[S6:CONVERGE]` — Select winner per dominance rules
 
 ## Report Format — 3-Block Layout
 
@@ -102,6 +103,7 @@ Deep technical dive for engineers:
 
 ## Investigation Features
 
+- **Yuno Knowledge Base**: Loads architectural context from `yuno-payments/knowledge-base-lib` (local → Context7 → GitHub MCP fallback)
 - **Jira Fetch Strategy**: REST API (primary) -> Service Desk API -> Memory -> MCP (last resort)
 - **Datadog Fallback**: MCP -> Direct URL generation -> /yuno:datadog skill
 - **Multi-Service Tracing**: Traces data flow across repos when bug spans services
