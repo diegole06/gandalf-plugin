@@ -15,6 +15,9 @@ NEVER wait for the user to type `/gandalf:analyze` — detect the intent and inv
 | "implementa el fix", "arregla esto", "fix it", "aplica la solucion" (after investigation exists) | Implement fix | `/gandalf:fix` |
 | "resumen para slack", "summary", "resumen standup", "dame el resumen" (after investigation exists) | Generate summary | `/gandalf:summary` |
 | "plan para core", "cross-team plan", "plan para otro equipo" (after investigation exists) | Cross-team plan | `/gandalf:core-pr-plan` |
+| "monitorea el deploy", "vigila el deploy", "watch deploy", "deploy monitor" | Monitor deploy | `/gandalf:sentinel {input}` |
+| "sentinel" + service name | Monitor deploy | `/gandalf:sentinel {input}` |
+| "como va el deploy" + service name | Monitor deploy | `/gandalf:sentinel {input}` |
 
 ### Detection Priority
 1. If the input IS a Jira URL or ticket ID with no other context -> `/gandalf:analyze`
@@ -29,6 +32,10 @@ Every time Gandalf is implicitly triggered (auto-detected), BEFORE executing the
 3. Then execute the corresponding `/gandalf:*` skill
 
 This signals to the user that Gandalf is about to work his magic.
+
+### Detection Priority
+5. If the input mentions deploy monitoring keywords + a service name -> `/gandalf:sentinel`
+6. "como va el deploy" without specific service -> ask for service name, then `/gandalf:sentinel`
 
 ### What NOT to auto-trigger
 - Generic code questions that mention a service name (e.g., "how does unlimint-int work?")
